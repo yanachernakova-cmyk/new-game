@@ -1,0 +1,17 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Cat</title>
+  <g stroke="#1f1f1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 24L12 8L26 18L32 12L38 18L52 8L46 24" fill="#f0e6da"/>
+    <circle cx="32" cy="38" r="18" fill="#f0e6da"/>
+    <circle cx="24" cy="40" r="3" fill="#f2b8b8" stroke="none"/>
+    <circle cx="40" cy="40" r="3" fill="#f2b8b8" stroke="none"/>
+    <circle cx="26" cy="36" r="2.5" fill="#1f1f1f" stroke="none"/>
+    <circle cx="38" cy="36" r="2.5" fill="#1f1f1f" stroke="none"/>
+    <path d="M32 39L30 41L32 43L34 41L32 39Z" fill="#1f1f1f" stroke="none"/>
+    <path d="M32 43C28 46 24 46 22 45" />
+    <path d="M32 43C36 46 40 46 42 45" />
+    <path d="M12 38C8 38 6 40 4 42" />
+    <path d="M52 38C56 38 58 40 60 42" />
+    <path d="M12 50C4 48 4 40 12 40C20 40 22 48 12 50C6 52 4 56 8 60" />
+  </g>
+</svg>

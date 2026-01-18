@@ -1,0 +1,243 @@
+:root {
+  color-scheme: light;
+  font-family: "Press Start 2P", system-ui, sans-serif;
+  --bg: #f6f0e6;
+  --panel: #fff7e8;
+  --ink: #1b1b1b;
+  --accent: #e25f3b;
+  --muted: #5b4b3f;
+  --border: #1b1b1b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 20%, #fffaf1 0%, #f6f0e6 60%, #efe6d8 100%);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+}
+
+.is-playing {
+  cursor: none;
+}
+
+.app {
+  width: min(960px, 92vw);
+  min-height: 80vh;
+  display: grid;
+}
+
+.screen {
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+  text-align: center;
+}
+
+.title {
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.instructions {
+  background: var(--panel);
+  border: 3px solid var(--border);
+  padding: 16px 20px;
+  box-shadow: 6px 6px 0 var(--border);
+  width: min(540px, 90vw);
+}
+
+.instructions p {
+  margin: 0 0 12px;
+  font-size: 0.65rem;
+  line-height: 1.6;
+}
+
+.instructions p:last-child {
+  margin-bottom: 0;
+}
+
+.btn {
+  font-family: inherit;
+  font-size: 0.85rem;
+  background: var(--panel);
+  border: 3px solid var(--border);
+  padding: 14px 26px;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 var(--border);
+  letter-spacing: 0.08em;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 2px 2px 0 var(--border);
+}
+
+.btn--small {
+  font-size: 0.6rem;
+  padding: 10px 16px;
+  box-shadow: 4px 4px 0 var(--border);
+}
+
+.best {
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.screen--playing {
+  align-content: start;
+  text-align: left;
+  gap: 16px;
+}
+
+.hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  font-size: 0.6rem;
+}
+
+.hud__left {
+  display: grid;
+  gap: 8px;
+}
+
+.gifts {
+  display: flex;
+  gap: 10px;
+}
+
+.gift-slot {
+  min-width: 120px;
+  min-height: 34px;
+  border: 3px solid var(--border);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  padding: 4px 6px;
+}
+
+.arena {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 3px solid var(--border);
+  background: #fffaf0;
+  box-shadow: inset 0 0 0 3px #f0e6d8;
+  position: relative;
+  overflow: hidden;
+}
+
+.fish {
+  width: 22px;
+  height: 14px;
+  background: var(--accent);
+  position: absolute;
+  border-radius: 10px;
+  transform: translate(-50%, -50%);
+}
+
+.fish::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  top: 2px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}
+
+.mouse-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cat {
+  width: 34px;
+  height: 34px;
+  background: var(--ink);
+  border-radius: 50%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.cat::before,
+.cat::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--ink);
+  top: -4px;
+  border-radius: 3px;
+}
+
+.cat::before {
+  left: 2px;
+  transform: rotate(-10deg);
+}
+
+.cat::after {
+  right: 2px;
+  transform: rotate(10deg);
+}
+
+.toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translate(-50%, -10px);
+  background: var(--panel);
+  border: 3px solid var(--border);
+  padding: 8px 12px;
+  font-size: 0.6rem;
+  box-shadow: 4px 4px 0 var(--border);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.toast--show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.screen--end .message {
+  font-size: 0.9rem;
+  padding: 12px 18px;
+  border: 3px solid var(--border);
+  background: var(--panel);
+  box-shadow: 6px 6px 0 var(--border);
+  white-space: pre-line;
+}
+
+@media (max-width: 600px) {
+  .hud {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .screen {
+    gap: 18px;
+  }
+}

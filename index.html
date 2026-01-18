@@ -4,286 +4,55 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Cat vs Cursor</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg: #f6f3ec;
-        --ink: #1a1a1a;
-        --accent: #c45d3d;
-      }
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-      }
-      body {
-        display: grid;
-        place-items: center;
-        font-family: "Georgia", "Times New Roman", serif;
-        background: radial-gradient(circle at 20% 20%, #fff 0%, var(--bg) 55%, #efe9df 100%);
-        color: var(--ink);
-      }
-      main {
-        text-align: center;
-        width: min(860px, 92vw);
-      }
-      header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        margin: 0 0 12px;
-      }
-      h1 {
-        font-size: clamp(1.4rem, 2.4vw, 2rem);
-        letter-spacing: 0.04em;
-        margin: 0;
-      }
-      #timer {
-        font-variant-numeric: tabular-nums;
-        font-size: 1rem;
-      }
-      #arena {
-        position: relative;
-        width: min(860px, 92vw);
-        aspect-ratio: 4 / 3;
-        border: 1px solid var(--ink);
-        border-radius: 8px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(240, 234, 223, 0.6));
-        overflow: hidden;
-        cursor: none;
-      }
-      .entity {
-        position: absolute;
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-      }
-      #cat {
-        background: var(--ink);
-        box-shadow: 0 0 0 4px rgba(26, 26, 26, 0.12);
-      }
-      #cursor {
-        border: 2px solid var(--accent);
-        width: 20px;
-        height: 20px;
-      }
-      #gift {
-        border: 2px dashed var(--accent);
-        width: 18px;
-        height: 18px;
-        background: rgba(196, 93, 61, 0.08);
-        display: none;
-      }
-      #status {
-        margin-top: 10px;
-        min-height: 1.2em;
-        font-size: 0.95rem;
-        color: #5b4b3f;
-      }
-      #start {
-        margin-top: 10px;
-        border: 1px solid var(--ink);
-        background: transparent;
-        padding: 8px 16px;
-        font-family: inherit;
-        font-size: 0.95rem;
-        letter-spacing: 0.04em;
-        cursor: pointer;
-      }
-    </style>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <main>
-      <header>
-        <h1>Cat vs Cursor</h1>
-        <div id="timer">00:00.0</div>
-      </header>
-      <section id="arena" aria-label="Game arena">
-        <div id="cat" class="entity" aria-hidden="true"></div>
-        <div id="cursor" class="entity" aria-hidden="true"></div>
-        <div id="gift" class="entity" aria-hidden="true"></div>
+    <main class="app">
+      <section class="screen screen--start" data-screen="start">
+        <h1 class="title">CAT vs CURSOR</h1>
+        <button class="btn" data-action="start">START</button>
+        <div class="instructions">
+          <p>Move your cursor to run.</p>
+          <p>Every 10 seconds you get a gift. Use 1/2 to activate.</p>
+          <p>Survive 60s to win.</p>
+        </div>
+        <p class="best">Best time: <span data-best-time>0.0s</span></p>
       </section>
-      <div id="status">Move your cursor inside the arena to start.</div>
-      <button id="start" type="button">Start</button>
+
+      <section class="screen screen--playing" data-screen="playing" hidden>
+        <header class="hud">
+          <div class="hud__left">
+            <div>Time: <span data-time>0.0</span> / 60.0</div>
+            <div>Speed Level: <span data-speed>1</span></div>
+            <div class="gifts">
+              <span class="gift-slot" data-gift-slot="0">Empty</span>
+              <span class="gift-slot" data-gift-slot="1">Empty</span>
+            </div>
+          </div>
+          <div class="hud__right">
+            <button class="btn btn--small" data-action="mute">MUTE</button>
+          </div>
+        </header>
+        <div class="arena" aria-hidden="true">
+          <div class="fish" data-fish hidden></div>
+          <div class="cat" data-cat></div>
+          <div class="mouse-dot" data-cursor></div>
+        </div>
+        <div class="toast" data-toast aria-live="polite"></div>
+      </section>
+
+      <section class="screen screen--end" data-screen="end" hidden>
+        <div class="message" data-message>Game Over</div>
+        <button class="btn" data-action="restart">RESTART</button>
+        <p class="best">Best time: <span data-best-time>0.0s</span></p>
+      </section>
     </main>
-    <script>
-      const arena = document.getElementById("arena");
-      const cat = document.getElementById("cat");
-      const cursor = document.getElementById("cursor");
-      const gift = document.getElementById("gift");
-      const timer = document.getElementById("timer");
-      const status = document.getElementById("status");
-      const startButton = document.getElementById("start");
-
-      const arenaRect = () => arena.getBoundingClientRect();
-      const state = {
-        running: false,
-        startTime: 0,
-        cat: { x: 100, y: 100 },
-        cursor: { x: 200, y: 200 },
-        baseSpeed: 120,
-        speedMultiplier: 1,
-        distractionUntil: 0,
-        nextGiftAt: 10,
-        giftActive: false,
-        giftType: null,
-        gifts: [
-          { type: "slow", label: "Slowdown" },
-          { type: "snack", label: "Snack distraction" },
-        ],
-      };
-
-      const resetGame = () => {
-        state.running = false;
-        state.startTime = 0;
-        state.cat = { x: 100, y: 100 };
-        state.cursor = { x: 200, y: 200 };
-        state.speedMultiplier = 1;
-        state.distractionUntil = 0;
-        state.nextGiftAt = 10;
-        state.giftActive = false;
-        state.giftType = null;
-        gift.style.display = "none";
-        status.textContent = "Move your cursor inside the arena to start.";
-        timer.textContent = "00:00.0";
-        draw();
-      };
-
-      const startGame = () => {
-        const { width, height } = arenaRect();
-        state.cat = { x: width * 0.2, y: height * 0.2 };
-        state.cursor = { x: width * 0.6, y: height * 0.6 };
-        state.startTime = performance.now();
-        state.running = true;
-        state.nextGiftAt = 10;
-        status.textContent = "Stay away from the cat.";
-        gift.style.display = "none";
-      };
-
-      const setEntity = (el, pos) => {
-        el.style.left = `${pos.x}px`;
-        el.style.top = `${pos.y}px`;
-      };
-
-      const draw = () => {
-        setEntity(cat, state.cat);
-        setEntity(cursor, state.cursor);
-      };
-
-      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-
-      const spawnGift = () => {
-        const { width, height } = arenaRect();
-        state.giftActive = true;
-        state.giftType = state.gifts[Math.floor(Math.random() * state.gifts.length)];
-        gift.style.display = "block";
-        gift.style.left = `${Math.random() * (width - 40) + 20}px`;
-        gift.style.top = `${Math.random() * (height - 40) + 20}px`;
-        status.textContent = `Gift: ${state.giftType.label}`;
-      };
-
-      const applyGift = () => {
-        if (!state.giftType) return;
-        const now = performance.now();
-        if (state.giftType.type === "slow") {
-          state.speedMultiplier = 0.55;
-          state.distractionUntil = now + 3000;
-          status.textContent = "Slowdown activated.";
-        }
-        if (state.giftType.type === "snack") {
-          state.speedMultiplier = 0.3;
-          state.distractionUntil = now + 2500;
-          status.textContent = "Snack distraction! Cat pauses.";
-        }
-        state.giftActive = false;
-        state.giftType = null;
-        gift.style.display = "none";
-      };
-
-      const updateTimer = (elapsedSeconds) => {
-        const minutes = Math.floor(elapsedSeconds / 60);
-        const seconds = Math.floor(elapsedSeconds % 60);
-        const tenths = Math.floor((elapsedSeconds % 1) * 10);
-        timer.textContent = `${String(minutes).padStart(2, "0")}:${String(
-          seconds
-        ).padStart(2, "0")}.${tenths}`;
-      };
-
-      const checkGiftPickup = () => {
-        if (!state.giftActive) return false;
-        const giftRect = gift.getBoundingClientRect();
-        const arenaBox = arenaRect();
-        const giftPos = {
-          x: giftRect.left - arenaBox.left + giftRect.width / 2,
-          y: giftRect.top - arenaBox.top + giftRect.height / 2,
-        };
-        const dx = state.cursor.x - giftPos.x;
-        const dy = state.cursor.y - giftPos.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance < 18) {
-          applyGift();
-          return true;
-        }
-        return false;
-      };
-
-      const tick = (time) => {
-        if (!state.running) {
-          requestAnimationFrame(tick);
-          return;
-        }
-        const elapsed = (time - state.startTime) / 1000;
-        updateTimer(elapsed);
-
-        if (elapsed >= state.nextGiftAt) {
-          state.nextGiftAt += 10;
-          if (!state.giftActive) spawnGift();
-        }
-
-        if (state.distractionUntil && time > state.distractionUntil) {
-          state.distractionUntil = 0;
-          state.speedMultiplier = 1;
-          status.textContent = "Stay away from the cat.";
-        }
-
-        const dx = state.cursor.x - state.cat.x;
-        const dy = state.cursor.y - state.cat.y;
-        const distance = Math.hypot(dx, dy) || 1;
-        const speed = state.baseSpeed * state.speedMultiplier;
-        const step = (speed / 60);
-        state.cat.x += (dx / distance) * step;
-        state.cat.y += (dy / distance) * step;
-
-        checkGiftPickup();
-
-        draw();
-
-        if (distance < 18) {
-          state.running = false;
-          status.textContent = "Caught! Press Start to try again.";
-        }
-
-        requestAnimationFrame(tick);
-      };
-
-      arena.addEventListener("mousemove", (event) => {
-        const rect = arenaRect();
-        state.cursor.x = clamp(event.clientX - rect.left, 0, rect.width);
-        state.cursor.y = clamp(event.clientY - rect.top, 0, rect.height);
-        draw();
-      });
-
-      arena.addEventListener("mouseleave", () => {
-        if (state.running) status.textContent = "Cursor lost. Come back.";
-      });
-
-      startButton.addEventListener("click", () => {
-        startGame();
-      });
-
-      resetGame();
-      requestAnimationFrame(tick);
-    </script>
+    <script src="game.js"></script>
   </body>
 </html>
