@@ -11,24 +11,17 @@
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <main class="app">
-      <section class="screen screen--start" data-screen="start">
-        <h1 class="title">CAT vs CURSOR</h1>
-        <button class="btn" data-action="start">START</button>
-        <div class="instructions">
-          <p>Move your cursor to run.</p>
-          <p>Every 10 seconds you get a gift. Use 1/2 to activate.</p>
-          <p>Survive 60s to win.</p>
-        </div>
-        <p class="best">Best time: <span data-best-time>0.0s</span></p>
-      </section>
-
-      <section class="screen screen--playing" data-screen="playing" hidden>
+      <section class="screen screen--playing" data-screen="playing">
         <header class="hud">
           <div class="hud__left">
-            <div>Time: <span data-time>0.0</span> / 60.0</div>
+            <div>Time: <span data-time>0.0</span> / 30.0</div>
             <div>Speed Level: <span data-speed>1</span></div>
             <div class="gifts">
               <span class="gift-slot" data-gift-slot="0">Empty</span>
@@ -39,18 +32,43 @@
             <button class="btn btn--small" data-action="mute">MUTE</button>
           </div>
         </header>
-        <div class="arena" aria-hidden="true">
+        <div class="arena">
           <div class="fish" data-fish hidden></div>
+          <div class="gift-pickup" data-gift hidden></div>
           <div class="cat" data-cat></div>
           <div class="mouse-dot" data-cursor></div>
+          <div class="overlay overlay--start" data-overlay="start">
+            <h1 class="title">CAT vs CURSOR</h1>
+            <div class="instructions">
+              <p>Move your cursor to run.</p>
+              <p>Random gifts may appear. Click the mouse to activate.</p>
+              <p>Survive 30s to win.</p>
+            </div>
+            <button class="btn" data-action="start">START</button>
+            <p class="best">Best time: <span data-best-time>0.0s</span></p>
+          </div>
+          <div class="overlay overlay--end" data-overlay="end" hidden>
+            <div class="end end--lose" data-end="lose" hidden>
+              <h2 class="title title--small">GAME OVER</h2>
+              <div class="message" data-message></div>
+              <button class="btn" data-action="restart">RESTART</button>
+              <p class="best">Best time: <span data-best-time>0.0s</span></p>
+            </div>
+            <div class="end end--win" data-end="win" hidden>
+              <h2 class="title title--small">CONGRATULATIONS</h2>
+              <div class="cookie-wrap">
+                <button class="cookie" type="button" data-cookie></button>
+                <div class="cookie-note">Press a cookie</div>
+              </div>
+              <div class="message message--fortune" data-fortune hidden></div>
+              <button class="btn" data-action="restart" data-restart hidden>
+                START THE GAME AGAIN
+              </button>
+              <p class="best">Best time: <span data-best-time>0.0s</span></p>
+            </div>
+          </div>
         </div>
         <div class="toast" data-toast aria-live="polite"></div>
-      </section>
-
-      <section class="screen screen--end" data-screen="end" hidden>
-        <div class="message" data-message>Game Over</div>
-        <button class="btn" data-action="restart">RESTART</button>
-        <p class="best">Best time: <span data-best-time>0.0s</span></p>
       </section>
     </main>
     <script src="game.js"></script>

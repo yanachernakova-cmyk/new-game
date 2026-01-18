@@ -5,6 +5,7 @@ const STATE = {
 };
 
 const BEST_TIME_KEY = "cat-vs-cursor-best";
+const MAX_TIME = 30;
 const GIFTS = [
   { id: "fish", name: "Fish Decoy", duration: 3 },
   { id: "slow", name: "Slow Time", duration: 4 },
@@ -33,33 +34,46 @@ const FORTUNES = [
   "You are building momentum. Keep going.",
 ];
 
-const screens = document.querySelectorAll("[data-screen]");
 const bestTimeEls = document.querySelectorAll("[data-best-time]");
 const timeEl = document.querySelector("[data-time]");
 const speedEl = document.querySelector("[data-speed]");
 const messageEl = document.querySelector("[data-message]");
 const arena = document.querySelector(".arena");
+const hud = document.querySelector(".hud");
 const catEl = document.querySelector("[data-cat]");
 const cursorEl = document.querySelector("[data-cursor]");
 const fishEl = document.querySelector("[data-fish]");
+const giftEl = document.querySelector("[data-gift]");
 const giftSlots = document.querySelectorAll("[data-gift-slot]");
 const toastEl = document.querySelector("[data-toast]");
+const startOverlay = document.querySelector('[data-overlay="start"]');
+const endOverlay = document.querySelector('[data-overlay="end"]');
+const endLose = document.querySelector('[data-end="lose"]');
+const endWin = document.querySelector('[data-end="win"]');
+const fortuneEl = document.querySelector("[data-fortune]");
+const cookieButton = document.querySelector("[data-cookie]");
+const restartButton = document.querySelector("[data-restart]");
 
 const state = {
   current: STATE.START,
   bestTime: 0,
   time: 0,
   speed: 1,
-  baseSpeed: 140,
+  baseSpeed: 280,
   nextLevelAt: 10,
-  nextGiftAt: 10,
+  nextGiftAt: 0,
+  giftsSpawned: 0,
   lastFrame: 0,
   isRunning: false,
+  endMode: null,
+  pendingFortune: "",
   catPos: { x: 0, y: 0 },
   catVel: { x: 0, y: 0 },
   cursorPos: { x: 0, y: 0 },
   fishPos: { x: 0, y: 0 },
+  giftPos: { x: 0, y: 0 },
   inventory: [null, null],
+  giftPickup: null,
   effects: {
     fishUntil: 0,
     slowUntil: 0,
@@ -71,7 +85,7 @@ const state = {
 const loadBestTime = () => {
   const value = Number(localStorage.getItem(BEST_TIME_KEY));
   if (!Number.isNaN(value)) {
-    state.bestTime = value;
+    state.bestTime = Math.min(value, MAX_TIME);
   }
 };
 
@@ -81,7 +95,7 @@ const saveBestTime = (value) => {
 };
 
 const renderBestTime = () => {
-  const label = `${state.bestTime.toFixed(1)}s`;
+  const label = `${Math.min(state.bestTime, MAX_TIME).toFixed(1)}s`;
   bestTimeEls.forEach((el) => {
     el.textContent = label;
   });
@@ -89,11 +103,19 @@ const renderBestTime = () => {
 
 const showScreen = (next) => {
   state.current = next;
-  screens.forEach((screen) => {
-    const name = screen.dataset.screen;
-    screen.hidden = name !== next;
-  });
   document.body.classList.toggle("is-playing", next === STATE.PLAYING);
+  if (startOverlay) startOverlay.hidden = next !== STATE.START;
+  if (endOverlay) endOverlay.hidden = next !== STATE.END;
+  if (hud) hud.hidden = next !== STATE.PLAYING;
+  if (catEl) catEl.hidden = next !== STATE.PLAYING;
+  if (cursorEl) cursorEl.hidden = next !== STATE.PLAYING;
+  if (fishEl) fishEl.hidden = true;
+  if (giftEl) {
+    giftEl.hidden = next !== STATE.PLAYING || !state.giftPickup;
+  }
+  if (toastEl) toastEl.classList.remove("toast--show");
+  if (endLose) endLose.hidden = !(next === STATE.END && state.endMode === "lose");
+  if (endWin) endWin.hidden = !(next === STATE.END && state.endMode === "win");
 };
 
 const updateHud = () => {
@@ -152,11 +174,14 @@ const randomizeFish = () => {
 
 const grantGift = () => {
   const gift = GIFTS[Math.floor(Math.random() * GIFTS.length)];
-  const emptyIndex = state.inventory.indexOf(null);
-  const slotIndex = emptyIndex === -1 ? 0 : emptyIndex;
-  state.inventory[slotIndex] = gift;
-  updateGiftHud();
-  showToast(`Gift received: ${gift.name}`);
+  state.giftPickup = gift;
+  const rect = getArenaRect();
+  state.giftPos.x = Math.random() * rect.width;
+  state.giftPos.y = Math.random() * rect.height;
+  if (giftEl) {
+    setElementPosition(giftEl, state.giftPos);
+    giftEl.hidden = false;
+  }
 };
 
 const useGift = (slotIndex) => {
@@ -191,23 +216,44 @@ const updateEffects = () => {
   }
 };
 
+const tryPickupGift = () => {
+  if (!state.giftPickup || giftEl.hidden) return;
+  const emptyIndex = state.inventory.indexOf(null);
+  if (emptyIndex === -1) return;
+  const distance = Math.hypot(
+    state.cursorPos.x - state.giftPos.x,
+    state.cursorPos.y - state.giftPos.y
+  );
+  if (distance < 20) {
+    state.inventory[emptyIndex] = state.giftPickup;
+    state.giftPickup = null;
+    giftEl.hidden = true;
+    updateGiftHud();
+    showToast(`Gift received: ${state.inventory[emptyIndex].name}`);
+  }
+};
+
 const step = (time) => {
   if (!state.isRunning) return;
   const dt = state.lastFrame ? Math.min(0.05, (time - state.lastFrame) / 1000) : 0;
   state.lastFrame = time;
 
-  state.time = Math.min(60, state.time + dt);
+  state.time = Math.min(30, state.time + dt);
 
   if (state.time >= state.nextLevelAt && state.nextLevelAt <= 50) {
     state.speed = Math.min(6, 1 + Math.floor(state.time / 10));
     state.nextLevelAt += 10;
   }
-  if (state.time >= state.nextGiftAt && state.nextGiftAt <= 50) {
-    grantGift();
-    state.nextGiftAt += 10;
+  if (state.time >= state.nextGiftAt && state.nextGiftAt <= 30) {
+    if (state.giftsSpawned < 3) {
+      grantGift();
+      state.giftsSpawned += 1;
+      state.nextGiftAt = state.time + (Math.random() * 6 + 4);
+    }
   }
   updateHud();
   updateEffects();
+  tryPickupGift();
 
   const rect = getArenaRect();
   const target =
@@ -245,12 +291,12 @@ const step = (time) => {
     endGame(
       `You survived only ${state.time.toFixed(
         1
-      )} seconds. Try to reach 1 minute to win the game and receive the gift.`
+      )} seconds. Try to reach 30 seconds to win the game and receive the gift.`
     );
     return;
   }
 
-  if (state.time >= 60) {
+  if (state.time >= 30) {
     winGame();
     return;
   }
@@ -260,11 +306,15 @@ const step = (time) => {
 
 const startGame = () => {
   state.speed = 1;
-  state.baseSpeed = 140;
+  state.baseSpeed = 280;
   state.nextLevelAt = 10;
-  state.nextGiftAt = 10;
+  state.nextGiftAt = Math.random() * 6 + 4;
+  state.giftsSpawned = 0;
   state.inventory = [null, null];
   state.effects = { fishUntil: 0, slowUntil: 0, scareUntil: 0 };
+  state.endMode = null;
+  state.pendingFortune = "";
+  state.giftPickup = null;
   showScreen(STATE.PLAYING);
   state.time = 0;
   state.lastFrame = 0;
@@ -272,6 +322,9 @@ const startGame = () => {
   updateHud();
   updateGiftHud();
   fishEl.hidden = true;
+  if (giftEl) giftEl.hidden = true;
+  if (fortuneEl) fortuneEl.hidden = true;
+  if (restartButton) restartButton.hidden = true;
   const rect = getArenaRect();
   state.cursorPos.x = rect.width * 0.5;
   state.cursorPos.y = rect.height * 0.5;
@@ -282,24 +335,40 @@ const startGame = () => {
 
 const endGame = (message) => {
   state.isRunning = false;
+  state.endMode = "lose";
   if (state.time > state.bestTime) {
     saveBestTime(state.time);
   }
   renderBestTime();
-  messageEl.textContent = message || "Game Over";
+  messageEl.textContent = message || "Game over";
   if (toastEl) {
     toastEl.classList.remove("toast--show");
   }
   if (fishEl) {
     fishEl.hidden = true;
   }
+  if (giftEl) {
+    giftEl.hidden = true;
+  }
   showScreen(STATE.END);
 };
 
 const winGame = () => {
-  const fortune = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
-  const message = `You won, congrats 🎉\nYour fortune cookie:\n${fortune}`;
-  endGame(message);
+  state.isRunning = false;
+  state.endMode = "win";
+  state.pendingFortune = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+  if (fortuneEl) fortuneEl.hidden = true;
+  if (restartButton) restartButton.hidden = true;
+  if (toastEl) {
+    toastEl.classList.remove("toast--show");
+  }
+  if (fishEl) {
+    fishEl.hidden = true;
+  }
+  if (giftEl) {
+    giftEl.hidden = true;
+  }
+  showScreen(STATE.END);
 };
 
 const handleAction = (action) => {
@@ -317,6 +386,16 @@ document.addEventListener("click", (event) => {
   handleAction(button.dataset.action);
 });
 
+if (cookieButton) {
+  cookieButton.addEventListener("click", () => {
+    if (state.endMode !== "win") return;
+    if (!fortuneEl) return;
+    fortuneEl.textContent = `Your fortune cookie:\n${state.pendingFortune}`;
+    fortuneEl.hidden = false;
+    if (restartButton) restartButton.hidden = false;
+  });
+}
+
 document.addEventListener("keydown", (event) => {
   if (state.current !== STATE.PLAYING) return;
   if (event.key === "1") useGift(0);
@@ -326,6 +405,15 @@ document.addEventListener("keydown", (event) => {
 arena.addEventListener("mousemove", (event) => {
   if (state.current !== STATE.PLAYING) return;
   updateCursorPosition(event);
+});
+
+arena.addEventListener("click", () => {
+  if (state.current !== STATE.PLAYING) return;
+  if (state.inventory[0]) {
+    useGift(0);
+  } else if (state.inventory[1]) {
+    useGift(1);
+  }
 });
 
 loadBestTime();
